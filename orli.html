@@ -75,6 +75,43 @@
     white-space: nowrap;
   }
 
+  .login {
+    max-width: 340px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+
+  .login label {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .login input {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 16px;
+    font-family: inherit;
+  }
+
+  .login button { width: 100%; }
+  .login button:disabled { opacity: 0.6; cursor: default; }
+
+  .login .error {
+    color: var(--clay);
+    font-size: 13px;
+    margin: 12px 0 0;
+  }
+
   .card {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -100,6 +137,17 @@
   <h1>Escucha</h1>
   <p class="lede" id="lede"></p>
 
+  <form class="login" id="login">
+    <label>Usuario
+      <input id="login-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+    </label>
+    <label>Contraseña
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" id="login-submit">Entrar</button>
+    <p class="error" id="login-error" role="alert" hidden>Usuario o contraseña incorrectos.</p>
+  </form>
+
   <section class="card" id="analysis-card">
     <div id="report-charts" class="report-charts" hidden></div>
     <iframe
@@ -111,7 +159,7 @@
   </section>
 </main>
 <script src="orli/charts.js"></script>
-<script src="orli/report-008.js"></script>
+<script src="orli/report-008.enc.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
 
@@ -142,8 +190,38 @@
     $("analysis-card").classList.add("visible");
   }
 
-  $("lede").textContent = window.ORLI_REPORT.code + " · " + window.ORLI_REPORT.title;
-  renderAnalysis(window.ORLI_REPORT);
+  const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
+
+  async function decryptReport(user, password) {
+    const { iterations, salt, iv, data } = window.ORLI_REPORT_ENC;
+    const material = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(`${user}:${password}`), "PBKDF2", false, ["deriveKey"]
+    );
+    const key = await crypto.subtle.deriveKey(
+      { name: "PBKDF2", hash: "SHA-256", salt: fromBase64(salt), iterations },
+      material,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(iv) }, key, fromBase64(data));
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+
+  $("login").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    $("login-submit").disabled = true;
+    $("login-error").hidden = true;
+    try {
+      const report = await decryptReport($("login-user").value.trim(), $("login-password").value);
+      $("login").hidden = true;
+      $("lede").textContent = report.code + " · " + report.title;
+      renderAnalysis(report);
+    } catch {
+      $("login-error").hidden = false;
+      $("login-submit").disabled = false;
+    }
+  });
 </script>
 </body>
 </html>
