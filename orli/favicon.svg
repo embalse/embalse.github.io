@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Escucha">
+  <rect width="32" height="32" rx="8" fill="#4f5e56"/>
+  <path d="M9 15.5c0-4.2 3.1-7.6 7-7.6s7 3.4 7 7.6" fill="none" stroke="#f7f4ef" stroke-width="3.2" stroke-linecap="round"/>
+  <rect x="5.2" y="14.2" width="6.4" height="11.2" rx="3.1" fill="#e4d8c8"/>
+  <rect x="20.4" y="14.2" width="6.4" height="11.2" rx="3.1" fill="#e4d8c8"/>
+  <rect x="6.6" y="16.4" width="3.6" height="6.8" rx="1.7" fill="#8b6f5a"/>
+  <rect x="21.8" y="16.4" width="3.6" height="6.8" rx="1.7" fill="#8b6f5a"/>
+  <circle cx="8.4" cy="16.2" r="0.7" fill="#f7f4ef"/>
+</svg>
