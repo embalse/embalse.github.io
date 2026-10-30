@@ -103,8 +103,44 @@
     font-family: inherit;
   }
 
-  .login button { width: 100%; }
+  .login button[type="submit"] { width: 100%; }
   .login button:disabled { opacity: 0.6; cursor: default; }
+
+  .password-field {
+    position: relative;
+    display: block;
+    margin-top: 6px;
+  }
+
+  .password-field input {
+    margin-top: 0;
+    padding-right: 44px;
+  }
+
+  .login .password-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    background: none;
+    color: var(--muted);
+  }
+
+  .password-toggle svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .password-toggle[aria-pressed="false"] .eye-slash { display: none; }
 
   .login .error {
     color: var(--clay);
@@ -142,7 +178,16 @@
       <input id="login-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
     </label>
     <label>Contraseña
-      <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      <span class="password-field">
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+        <button type="button" class="password-toggle" id="password-toggle" aria-label="Mostrar contraseña" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path class="eye-slash" d="M4 4l16 16"/>
+          </svg>
+        </button>
+      </span>
     </label>
     <button type="submit" id="login-submit">Entrar</button>
     <p class="error" id="login-error" role="alert" hidden>Usuario o contraseña incorrectos.</p>
@@ -207,6 +252,14 @@
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(iv) }, key, fromBase64(data));
     return JSON.parse(new TextDecoder().decode(plain));
   }
+
+  $("password-toggle").addEventListener("click", () => {
+    const input = $("login-password");
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    $("password-toggle").setAttribute("aria-pressed", show);
+    $("password-toggle").setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+  });
 
   $("login").addEventListener("submit", async (event) => {
     event.preventDefault();
