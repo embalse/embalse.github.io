@@ -1,11 +1,94 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Embalse</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Embalse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#f7f4ee;color:#3a3f5c;overflow:hidden}
+canvas{position:fixed;inset:0}
+main{position:relative;z-index:1;height:100%;display:grid;place-items:center;pointer-events:none}
+.wrap{background:radial-gradient(closest-side,rgba(247,244,238,.92),rgba(247,244,238,.7) 60%,rgba(247,244,238,0));padding:4rem 6rem}
+h1{font-family:'Fraunces',serif;font-weight:300;font-size:clamp(60px,11vw,160px);letter-spacing:-.03em;line-height:.95}
+</style>
 </head>
 <body>
-  <h1>Embalse</h1>
+<canvas id="c"></canvas>
+<main><div class="wrap"><h1>Embalse</h1></div></main>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+let W,H,lines=[];
+const GAP=20,STEP=12,SIG=95,SPREAD=24; // SPREAD: radio (px) donde nace la espuma
+function resize(){
+  const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
+  c.width=W*d;c.height=H*d;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(d,0,0,d,0,0);
+  lines=[];const n=Math.ceil(H/GAP)+2,m=Math.ceil(W/STEP)+2;
+  for(let j=0;j<n;j++)lines.push({y0:j*GAP-GAP/2,o:new Float32Array(m),v:new Float32Array(m),h:205+(j/n)*125});
+}
+resize();addEventListener('resize',resize);
+
+const glyphs='0123456789012345.%$°≈∆+·'.split('');
+const foam=[];
+let mx=-9999,my=-9999,lx=null,ly=null,sp=0,idle=999;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function move(px,py){
+  if(lx===null){lx=px;ly=py}
+  const d=Math.hypot(px-lx,py-ly);sp=Math.max(sp,d);mx=px;my=py;lx=px;ly=py;idle=0;
+  const n=Math.min(4,d/6|0);
+  for(let k=0;k<n;k++){
+    const fx=mx+rnd(-SPREAD,SPREAD),fy=my+rnd(-SPREAD,SPREAD);
+    const j=Math.round((fy+GAP/2)/GAP),L=lines[j];if(!L)continue;
+    const i=Math.round(fx/STEP);if(i<0||i>=L.o.length)continue;
+    if(Math.abs(L.o[i])<2)continue;
+    if(foam.length<500)foam.push({x:fx,y:L.y0+L.o[i],vx:rnd(-.2,.2),vy:-rnd(.3,1.1),life:1,dec:rnd(.012,.022),ch:glyphs[Math.random()*glyphs.length|0],h:L.h,s:rnd(9,13),ph:rnd(0,6.3)});
+  }
+}
+addEventListener('mousemove',e=>move(e.clientX,e.clientY));
+addEventListener('touchmove',e=>{const t=e.touches[0];move(t.clientX,t.clientY)},{passive:true});
+document.addEventListener('mouseleave',()=>{idle=999});
+
+let t=0;
+function frame(){
+  t+=1/60;idle++;sp*=.85;
+  // el bulto del cursor se desvanece en ~0.5 s sin movimiento
+  const presence=Math.max(0,1-idle/30);
+  x.clearRect(0,0,W,H);
+  const A=Math.min(48,12+sp*1.4)*presence,s2=2*SIG*SIG;
+  x.lineWidth=1.1;
+  for(let j=0;j<lines.length;j++){
+    const L=lines[j],o=L.o,v=L.v,m=o.length,dy=L.y0-my,sgn=dy>=0?1:-1,gy=A>0?Math.exp(-dy*dy/s2):0;
+    x.strokeStyle=`hsla(${L.h},48%,66%,.55)`;
+    x.beginPath();
+    for(let i=0;i<m;i++){
+      const px=i*STEP,dx=px-mx;
+      const target=gy>.001?sgn*A*gy*Math.exp(-dx*dx/s2):0;
+      const lap=(i>0?o[i-1]:o[i])+(i<m-1?o[i+1]:o[i])-2*o[i];
+      v[i]+=(target-o[i])*.06+lap*.05;
+      v[i]*=.78; // amortiguamiento fuerte: reposo en ~1 a 2 s
+      o[i]+=v[i];
+      const y=L.y0+o[i]+Math.sin(px*.011+t*.7+j*.45)*1.5;
+      i?x.lineTo(px,y):x.moveTo(px,y);
+    }
+    x.stroke();
+  }
+  x.textAlign='center';x.textBaseline='middle';
+  for(let i=foam.length-1;i>=0;i--){
+    const f=foam[i];f.life-=f.dec;f.x+=f.vx+Math.sin(t*2+f.ph)*.25;f.y+=f.vy;f.vy*=.99;
+    if(f.life<=0){foam.splice(i,1);continue}
+    x.globalAlpha=Math.min(1,f.life*1.5)*.85;
+    x.fillStyle=`hsl(${f.h},40%,52%)`;
+    x.font=`300 ${f.s}px ui-monospace,monospace`;
+    x.fillText(f.ch,f.x,f.y);
+  }
+  x.globalAlpha=1;
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
 </body>
 </html>
